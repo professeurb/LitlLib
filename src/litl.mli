@@ -38,7 +38,8 @@ module type SET = sig
 	val add: elt -> t -> t
 	val remove : elt -> t -> t
   val change : (bool -> bool) -> elt -> t -> t
-	
+	val change_return : (bool -> bool * 'a) -> elt -> t -> t * 'a
+  
 	val singleton: elt -> t
 	
 	val union: t -> t -> t
