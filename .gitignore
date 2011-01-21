@@ -1,0 +1,5 @@
+_build/*
+_tags*
+myocamlbuild.ml
+setup.*
+src/META
