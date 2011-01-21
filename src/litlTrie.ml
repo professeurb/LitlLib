@@ -151,6 +151,29 @@ module Make (M : MAP) : TRIE with
     end
   end
 
+  let rec change_return f keys t = begin 
+    match keys with
+      [] -> begin 
+        let (flag, result) = f t.present in
+        ({ t with present = flag }, result)
+      end
+    | key :: keys' -> begin 
+        let (next', result) = M.change_return (
+          function
+            None -> begin 
+              let (flag, result) = f false in
+              if flag
+              then (Some (add keys' empty), result)
+              else (None, result)
+            end
+          | Some t' ->
+	            let (t'', result) = change_return f keys' t' in 
+	            if is_empty t'' then (None, result) else (Some t'', result)
+        ) key t.next in
+        ({ t with next = next' }, result)
+    end
+  end
+
 	let singleton elt = begin 
 		add elt empty
 	end

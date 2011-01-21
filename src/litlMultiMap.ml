@@ -99,11 +99,24 @@ module Make (M : MAP) (S : SET) : MULTI_MAP with
     M.change (function
 	    None -> if f false then Some (S.singleton value) else None
 		| Some c -> begin 
-		    let c' = S.change f value c in
-		    if S.is_empty c' then None else Some c'
+        let c' = S.change f value c in
+        if S.is_empty c' then None else Some c'
 	    end
 	  ) key t
   end
+
+  let change_return f (key, value) t = begin
+	    M.change_return (function
+		    None -> begin 
+		      let (flag, result) = f false in
+		      if flag then (Some (S.singleton value), result) else (None, result)
+        end
+			| Some c -> begin 
+	        let (c', result) = S.change_return f value c in
+	        if S.is_empty c' then (None, result) else (Some c', result)
+		    end
+		  ) key t
+	  end
 
 	(* val singleton: elt -> t *)
 	let singleton (key, value) = begin 
