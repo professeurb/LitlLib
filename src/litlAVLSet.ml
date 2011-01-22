@@ -195,6 +195,35 @@ module Make(Ord: OrderedType) : Set with
     end
   end
 
+  let rec change_return f elt t = begin 
+    match t with
+      BT.Empty -> begin 
+        let (flag, result) = f false in
+        if flag
+        then (BT.Node(BT.Empty, elt, BT.Empty, 1), result)
+        else (BT.Empty, result)
+      end
+    | BT.Node (l, v, r, _) as t -> begin 
+        let c = Ord.compare elt v in
+        if c = 0
+        then begin 
+          let (flag, result) = f true in
+	        if flag
+	        then (t, result) else (merge l r, result)
+        end
+        else
+	      if c < 0 
+	      then begin
+		      let (l', result) = change_return f elt l in
+		      (bal l' v r, result)
+		    end
+		    else begin 
+		      let (r', result) = change_return f elt r in
+		      (bal l v r', result)
+		    end
+    end
+  end
+
   (* Splitting.  split x s returns a triple (l, present, r) where
       - l is the set of elements of s that are < x
       - r is the set of elements of s that are > x
