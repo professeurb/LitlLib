@@ -213,7 +213,7 @@ module Make(Ord: OrderedType) : Set with
         end
         else
 	      if c < 0 
-	      then begin
+	      then begin 
 		      let (l', result) = change_return f elt l in
 		      (bal l' v r, result)
 		    end
@@ -240,6 +240,17 @@ module Make(Ord: OrderedType) : Set with
           let (ll, pres, rl) = split x l in (ll, pres, join rl v r)
         else
           let (lr, pres, rr) = split x r in (join l v lr, pres, rr)
+
+  let rec split_left x = function
+      BT.Empty ->
+        (BT.Empty, false)
+    | BT.Node(l, v, r, _) ->
+        let c = Ord.compare x v in
+        if c = 0 then (l, true)
+        else if c < 0 then
+          let (ll, pres) = split_left x l in (ll, pres)
+        else
+          let (lr, pres) = split_left x r in (join l v lr, pres)
 
   let rec split_right x = function
       BT.Empty ->

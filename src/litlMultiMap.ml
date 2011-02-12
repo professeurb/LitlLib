@@ -234,6 +234,17 @@ module Make (M : MAP) (S : SET) : MULTI_MAP with
 		(l, pres, r)
 	end
 
+	(* val split_left : elt -> t -> t * bool *)
+	let split_left (key, value) t = begin 
+  	let (tl, c_opt) = M.split_left key t in
+  	let c = match c_opt with None -> S.empty | Some c' -> c' in
+  	let (cl, pres) = S.split_left value c in
+  	let l = begin 
+  		if S.is_empty cl then tl else M.set key cl tl
+  	end in
+  	(l, pres)
+  end
+
 	(* val split_right : elt -> t -> bool * t *)
 	let split_right (key, value) t = begin 
 		let (c_opt, tr) = M.split_right key t in

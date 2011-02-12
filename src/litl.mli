@@ -63,6 +63,7 @@ module type SET = sig
 	val choose: t -> elt
 		
 	val split : elt -> t -> t * bool * t
+	val split_left : elt -> t -> t * bool
 	val split_right : elt -> t -> bool * t
 
 	val filter : (elt -> bool) -> t -> t
@@ -113,6 +114,7 @@ module type MAP = sig
 	val max : 'a t -> 'a elt
 
 	val split : index -> 'a t -> 'a t * 'a option * 'a t
+	val split_left : index -> 'a t -> 'a t * 'a option
 	val split_right : index -> 'a t -> 'a option * 'a t 
 end
 

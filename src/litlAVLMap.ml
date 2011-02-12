@@ -348,6 +348,20 @@ module Make (I : OrderedType) : Map with
 	        let (lr, pres, rr) = split key r in (join l k v lr, pres, rr)
 	end
 
+	(* val split_left : index -> 'a t -> 'a t * 'a option *)
+	let rec split_left key t = begin 
+		match t with
+	    BTM.Empty ->
+	      (BTM.Empty, None)
+	  | BTM.Node(l, k, v, r, _) ->
+	      let c = I.compare key k in
+	      if c = 0 then (l, Some v)
+	      else if c < 0 then
+	        let (ll, pres) = split_left key l in (ll, pres)
+	      else
+	        let (lr, pres) = split_left key r in (join l k v lr, pres)
+	end
+
 	(* val split_right : index -> 'a t -> 'a option * 'a t *)
 	let rec split_right key t = begin 
 		match t with

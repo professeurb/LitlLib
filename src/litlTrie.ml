@@ -367,6 +367,32 @@ module Make (M : MAP) : TRIE with
 		end
 	end
 
+	let rec split_left keys t = begin 
+		match keys with
+			[] -> (empty, t.present)
+		| key :: keys' -> begin 
+				let (m1, t_opt) = M.split_left key t.next in
+					match t_opt with
+						None ->
+  						(
+  							{
+  								present = t.present ;
+  								next = m1
+  							},
+  							false
+  						)
+					| Some t' -> 
+						let (t1, pres) = split_left keys' t' in
+						(
+							{
+  							present = t.present ;
+  							next = if (is_empty t1) then m1 else M.set key t1 m1
+  						},
+  						pres
+  					)
+		end
+	end
+
 	let rec split_right keys t = begin 
 		match keys with
 			[] -> (t.present, {present = false ; next = t.next})
