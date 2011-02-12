@@ -3,3 +3,4 @@ _tags*
 myocamlbuild.ml
 setup.*
 src/META
+.DS_Store
