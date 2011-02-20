@@ -209,7 +209,7 @@ module Map (I : ORDERED_TYPE) : MAP
 with
 	type index = I.t
 
-module type MULTI_MAP = sig
+module type MULTI_MAP = sig 
 	type key
 	type value
 	type set
