@@ -494,24 +494,39 @@ module Make_Queriable (M : MAP) = struct
     }
 	end
 
-	(* let rec add_enum elt t = begin 
-		match LitlEnumerator.next elt with
-			None -> { present = true ; next = t.next }
-		| Some (index, elt') ->
-			let next' = M.change (
-			fun t_opt -> Some (
-				add_enum elt' (
-					match t_opt with
-						None -> empty
-					| Some t -> t
-				)
-			)
-		) index t.next in {
-			present = t.present ;
-			next = next'
-		}
-	end *)
+  let rec add_enum_aux head tail enum do_ne to_do = begin 
+	  match Enumerator.next enum with
+	    Some (pre, enum') -> begin 
+		    let (trie, to_do') = match to_do with
+		      [] -> (Trie.empty, [])
+		    | trie :: to_do' -> (trie, to_do') in 
+        let trie' = begin 
+          Trie.add_enum (BiList.enum (BiList.cons pre head)) trie
+        end in
+        let new_tail = ref BiList.Nil in
+        tail := BiList.Cons (pre, new_tail) ;
+        add_enum_aux head new_tail enum' (trie' :: do_ne) to_do'
+      end
+	  | _ -> List.rev_append do_ne to_do
+	end
 
+  let add_enum elt t = begin 
+    let enum = Enumerator.memo elt in
+    let new_trie = Trie.add_enum enum t.trie in
+    let new_list = begin 
+	    match Enumerator.next enum with
+	      None -> t.list
+	    | Some (pre, enum') -> begin 
+	        let tail = ref BiList.Nil in
+		      add_enum_aux (BiList.cons pre tail) tail enum' [] t.list
+	    end
+	  end
+    in {
+      trie = new_trie ;
+		  list = new_list
+    }
+	end
+	
 	(* let rec remove keys t = begin 
 		match keys with
 			[] -> { present = false ; next = t.next }
