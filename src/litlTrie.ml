@@ -609,77 +609,29 @@ module Make_Queriable (M : MAP) = struct
 		) (M.keys t1.next) t1.next
 	} *)
 
-	(* let subset t1 t2 = begin
-		is_empty (diff t1 t2)
-	end *)
+  let subset t1 t2 = begin 
+    Trie.subset t1.trie t2.trie
+  end
 		
-	(* let enum t = begin 
-		let rec aux accu t = begin 
-			match t.present with
-				false -> begin 
-					LitlEnumerator.expand (
-						fun (key, t') -> aux (key :: accu) t'
-					) (M.enum t.next)
-				end
-			| true -> begin 
-						LitlEnumerator.from_once (
-							fun () -> Some (
-								List.rev accu,
-								LitlEnumerator.expand (
-									fun (key, t') -> aux (key :: accu) t'
-								) (M.enum t.next)
-							)
-						)
-			end
-		end in
-		aux [] t
-	end *)
+	let enum t = begin 
+	  Trie.enum t.trie
+	end
 
-	(* let iter f t = begin 
-		let rec aux keys t = begin 
-			begin 
-			  match t.present with
-				  false -> ()
-			  | true -> f (List.rev keys)
-			end ;
-			M.iter (fun key t' -> aux (key :: keys) t') t.next
-		end in
-		aux [] t
-	end *)
+  let iter f t = begin 
+    Trie.iter f t.trie
+  end
 
-	(* let fold f t accu = begin 
-		let rec aux keys t accu = begin 
-			let accu' = begin 
-				match t.present with
-					false -> accu
-				| true -> f (List.rev keys) accu
-			end in
-			M.fold (fun key t' a -> aux (key :: keys) t' a) t.next accu'
-		end in
-		aux [] t accu
-	end *)
-	
-	(* let for_all f t = begin 
-		let rec aux keys t = begin 
-			match t.present with
-				false -> M.for_all (fun key t' -> aux (key :: keys) t') t.next
-			| true ->
-					(f (List.rev keys)) 
-					&& (M.for_all (fun key t' -> aux (key :: keys) t') t.next)
-		end in
-		aux [] t
-	end *)
+  let fold f t accu = begin 
+    Trie.fold f t.trie accu
+  end
 
-	(* let exists f t = begin 
-		let rec aux keys t = begin 
-			match t.present with
-				false -> M.exists (fun key t' -> aux (key :: keys) t') t.next
-			| true ->
-					(f (List.rev keys)) 
-					|| (M.exists (fun key t' -> aux (key :: keys) t') t.next)
-		end in
-		aux [] t
-	end *)
+  let for_all f t = begin 
+    Trie.for_all f t.trie
+  end	
+
+  let exists f t = begin 
+    Trie.exists f t.trie
+  end
 
 	let compare t1 t2 = begin 
 	  Trie.compare t1.trie t2.trie
@@ -783,29 +735,6 @@ module Make_Queriable (M : MAP) = struct
 	end
 
 end
-
-(*
-let t = empty ;;
-
-let t = add [1;2;4] t ;;
-let t = add [2;2;3] t ;;
-let t = add [1;3;2] t ;;
-let t = add [1;2;2] t ;;
-let t = add [3;4] t ;;
-let t = add [4; 1; 2] t ;;
-
-List.map (fun t -> Enumerator.to_list (Trie.enum t)) t.list ;;
-
-4 - 3
-2 - 1 ; 2 - 2
-3 - 1
-
-4 - 1 2
-3 - 2 2
-2 - 1 3
-2 - 1 2
-
-*)
 
 (*
 
