@@ -14,11 +14,20 @@ module type MAP = LitlPervasives.MAP
 
 module type TRIE = sig 
   type pre_elt
-	include SET
+
+  type 'a map
+
+	type t = { 
+		present : bool ;
+		next : t map
+	}
+
+	include SET with type t := t
 	
 	val add_enum : pre_elt enum -> t -> t
 end
 
 module Make (M : MAP) : TRIE with
   type pre_elt = M.index and
-	type elt = M.index list
+	type elt = M.index list and
+	type 'a map = 'a M.t
