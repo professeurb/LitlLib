@@ -228,15 +228,24 @@ with
   type t = S.t M.t
 
 module type TRIE = sig 
-  include SET
   type pre_elt
+  type 'a map
 
+	type t = { 
+	  present : bool ;
+	  next : t map
+	}
+
+	include SET with type t := t
+	
 	val add_enum : pre_elt enum -> t -> t
+  val remove_enum : pre_elt enum -> t -> t
 end
 
 module Trie (M : MAP) : TRIE with
   type pre_elt = M.index and
-	type elt = M.index list
+  type elt = M.index list and
+  type 'a map = 'a M.t
 
 module type TRIE_MAP = sig 
 	include MAP

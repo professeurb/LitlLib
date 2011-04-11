@@ -29,6 +29,7 @@ module type TRIE = sig
   include SET with type t := t
   
   val add_enum : pre_elt enum -> t -> t
+  val remove_enum : pre_elt enum -> t -> t
 end
 
 module Make (M : MAP) = struct 
@@ -138,6 +139,20 @@ module Make (M : MAP) = struct
 					None -> None
 				| Some t' -> 
 						let t'' = remove keys' t' in
+						if is_empty t'' then None else Some t''
+				) key t.next
+			}
+	end
+
+	let rec remove_enum keys t = begin 
+		match LitlEnumerator.next keys with
+			None -> { present = false ; next = t.next }
+		| Some (key, keys') -> {
+				present = t.present ;
+				next = M.change (function
+					None -> None
+				| Some t' -> 
+						let t'' = remove_enum keys' t' in
 						if is_empty t'' then None else Some t''
 				) key t.next
 			}
