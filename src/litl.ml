@@ -63,6 +63,7 @@ module type TRIE = sig
 
 	include SET with type t := t
 	
+	val mem_enum : pre_elt enum -> t -> bool
 	val add_enum : pre_elt enum -> t -> t
   val remove_enum : pre_elt enum -> t -> t
 end

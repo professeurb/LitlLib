@@ -28,7 +28,8 @@ module type TRIE = sig
   
   include SET with type t := t
   
-  val add_enum : pre_elt enum -> t -> t
+  val mem_enum : pre_elt enum -> t -> bool
+	val add_enum : pre_elt enum -> t -> t
   val remove_enum : pre_elt enum -> t -> t
 end
 
@@ -94,14 +95,23 @@ module Make (M : MAP) = struct
 				| Some t' -> mem elt' t'
 	end
 
+	let rec mem_enum elt t = begin 
+		match Enum.next elt with
+			None -> t.present
+		| Some(index, elt') ->
+				match M.find_opt index t.next with
+					None -> false
+				| Some t' -> mem_enum elt' t'
+	end
+
 	let rec add elt t = begin 
 		match elt with
 			[] -> { present = true ; next = t.next }
 		| index :: elt' ->
 			let next' = M.change (
-			fun t_opt -> Some (
+			fun opt_trie -> Some (
 				add elt' (
-					match t_opt with
+					match opt_trie with
 						None -> empty
 					| Some t -> t
 				)
