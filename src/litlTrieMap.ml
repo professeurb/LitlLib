@@ -8,7 +8,7 @@
 *
 ************************************************************************)
 
-type 'a enum = 'a LitlEnumerator.enum
+type 'a enum = 'a LitlEnum.enum
 
 module type MAP = LitlPervasives.MAP
 
@@ -198,15 +198,15 @@ module Make (M : MAP) : TRIE_MAP with
 		let rec aux accu t = begin 
 			match t.value with
 				None -> begin 
-					LitlEnumerator.expand (fun (key, t') -> 
+					LitlEnum.expand (fun (key, t') -> 
 						aux (key :: accu) t'
 					) (M.enum t.next)
 				end
 			| Some v -> begin 
-						LitlEnumerator.from_once (fun () -> 
+						LitlEnum.from_once (fun () -> 
 							Some (
 								(List.rev accu, v),
-								LitlEnumerator.expand (fun (key, t') -> 
+								LitlEnum.expand (fun (key, t') -> 
 									aux (key :: accu) t'
 								) (M.enum t.next)
 							)
@@ -264,15 +264,15 @@ module Make (M : MAP) : TRIE_MAP with
 		let rec aux accu t = begin 
 			match t.value with
 				None -> begin 
-					LitlEnumerator.expand (fun (key, t') -> 
+					LitlEnum.expand (fun (key, t') -> 
 						aux (key :: accu) t'
 					) (M.enum t.next)
 				end
 			| Some _ -> begin 
-						LitlEnumerator.from_once (fun () -> 
+						LitlEnum.from_once (fun () -> 
 							Some (
 								(List.rev accu),
-								LitlEnumerator.expand (fun (key, t') -> 
+								LitlEnum.expand (fun (key, t') -> 
 									aux (key :: accu) t'
 								) (M.enum t.next)
 							)
@@ -286,15 +286,15 @@ module Make (M : MAP) : TRIE_MAP with
 		let rec aux t = begin 
 			match t.value with
 				None -> begin 
-					LitlEnumerator.expand (fun (_, t') -> 
+					LitlEnum.expand (fun (_, t') -> 
 						aux t'
 					) (M.enum t.next)
 				end
 			| Some v -> begin 
-						LitlEnumerator.from_once (fun () -> 
+						LitlEnum.from_once (fun () -> 
 							Some (
 								v,
-								LitlEnumerator.expand (fun (_, t') -> 
+								LitlEnum.expand (fun (_, t') -> 
 									aux t'
 								) (M.enum t.next)
 							)
@@ -492,7 +492,7 @@ module Make (M : MAP) : TRIE_MAP with
 				|	(Some entry, m') -> begin 
 					 match entry.value with
 						None -> extract_aux l' entry.next (extract_aux l' m' e)
-					| Some v -> LitlEnumerator.from_once (
+					| Some v -> LitlEnum.from_once (
 							fun () -> Some (
 								v, 
 								extract_aux l' entry.next (extract_aux l' m' e)
@@ -504,12 +504,12 @@ module Make (M : MAP) : TRIE_MAP with
 	(* val extract : index -> 'a t -> 'a enum *)
 	let extract l t = begin 
 		match t.value with
-				None -> extract_aux l t.next (LitlEnumerator.empty)
-			| Some v -> extract_aux l t.next (LitlEnumerator.from_list [v])
+				None -> extract_aux l t.next (LitlEnum.empty)
+			| Some v -> extract_aux l t.next (LitlEnum.from_list [v])
 	end
 
 	let rec extract_aux_enum l map e = begin 
-		match LitlEnumerator.next l with
+		match LitlEnum.next l with
 			None -> e
 		| Some (a, l') -> begin 
 				match (M.split_right a map) with
@@ -517,7 +517,7 @@ module Make (M : MAP) : TRIE_MAP with
 				|	(Some entry, m') -> begin 
 					 match entry.value with
 						None -> extract_aux_enum l' entry.next (extract_aux_enum l' m' e)
-					| Some v -> LitlEnumerator.from_once (
+					| Some v -> LitlEnum.from_once (
 							fun () -> Some (
 								v, 
 								extract_aux_enum l' entry.next (extract_aux_enum l' m' e)
@@ -530,11 +530,11 @@ module Make (M : MAP) : TRIE_MAP with
 	let extract_enum e t = begin 
 		match t.value with
 				None -> extract_aux_enum (
-					LitlEnumerator.memo e
-			  ) t.next (LitlEnumerator.empty)
+					LitlEnum.memo e
+			  ) t.next (LitlEnum.empty)
 			| Some v -> extract_aux_enum (
-				  LitlEnumerator.memo e
-				) t.next (LitlEnumerator.from_list [v])
+				  LitlEnum.memo e
+				) t.next (LitlEnum.from_list [v])
 	end
 
 end
@@ -547,7 +547,7 @@ let t = set [1; 3] 2 t ;;
 let t = set [2] 3 t ;;
 let t = set [4] 4 t ;;
 
-LitlEnumerator.to_list (extract [2; 3; 4] t) ;;
+LitlEnum.to_list (extract [2; 3; 4] t) ;;
 
 let int_to_list n =
 	let rec aux n acc =
@@ -564,11 +564,11 @@ let m = repeat (
 
 let cons a b = a :: b ;;
 
-LitlEnumerator.fold cons (values m) [] ;;
+LitlEnum.fold cons (values m) [] ;;
 
 let (m1, r, m2) = split [2;2;1] m ;;
 
-LitlEnumerator.fold cons (values m1) [] ;;
+LitlEnum.fold cons (values m1) [] ;;
 
 let oppen m = fold (fun k v l -> (k,v)::l) m [] ;;
 

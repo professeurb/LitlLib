@@ -11,13 +11,13 @@
 (*
 
 #load "BinaryTree.cmo" ;;
-#load "LitlEnumerator.cmo" ;;
+#load "LitlEnum.cmo" ;;
 
 module Ord = struct type t = int let compare = compare end
 
 *)
 
-type 'a enum = 'a LitlEnumerator.enum
+type 'a enum = 'a LitlEnum.enum
 
 module type OrderedType = LitlPervasives.ORDERED_TYPE
 
@@ -307,7 +307,7 @@ module Make(Ord: OrderedType) : Set with
             concat (diff l1 l2) (diff r1 r2)
 
 	let enum t = begin 
-		LitlEnumerator.from_binary_tree t
+		LitlEnum.from_binary_tree t
 	end
 
 	let fold = BT.fold
@@ -318,7 +318,7 @@ module Make(Ord: OrderedType) : Set with
 	let compare s1 s2 = begin 
 		try
 			let e2 = fold (fun v1 e2 -> begin 
-				match LitlEnumerator.next e2 with
+				match LitlEnum.next e2 with
 					None -> raise (Diff 1)
 				| Some (v2, e2') -> begin 
 						let c = Ord.compare v1 v2 in
@@ -328,7 +328,7 @@ module Make(Ord: OrderedType) : Set with
 				end
 			end
 			) s1 (enum s2) in
-			match LitlEnumerator.next e2 with
+			match LitlEnum.next e2 with
 				None -> 0
 			| _ -> -1
 		with Diff r -> r
@@ -338,14 +338,14 @@ module Make(Ord: OrderedType) : Set with
     (* compare s1 s2 = 0 *)
 		try
 			let e2 = fold (fun v1 e2 -> begin 
-				match LitlEnumerator.next e2 with
+				match LitlEnum.next e2 with
 					None -> raise Eject
 				| Some (v2, e2') -> begin 
 						if Ord.equal v1 v2 then e2' else raise Eject
 				end
 			end
 			) s1 (enum s2) in
-			match LitlEnumerator.next e2 with
+			match LitlEnum.next e2 with
 				None -> true
 			| _ -> false
 		with Eject -> false

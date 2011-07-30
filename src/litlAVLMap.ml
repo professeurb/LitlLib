@@ -12,7 +12,7 @@
 
 #load "BinaryTree.cmo" ;;
 #load "BinaryTreeMap.cmo" ;;
-#load "LitlEnumerator.cmo" ;;
+#load "LitlEnum.cmo" ;;
 
 module I = struct
 	type t = int
@@ -21,7 +21,7 @@ end
 
 *)
 
-type 'a enum = 'a LitlEnumerator.enum
+type 'a enum = 'a LitlEnum.enum
 
 module type OrderedType = LitlPervasives.ORDERED_TYPE
 
@@ -253,13 +253,13 @@ module Make (I : OrderedType) : Map with
 	end
 
 	(* val enum : 'a t -> (index * 'a) enum *)
-	let enum m = LitlEnumerator.from_binary_tree_map m
+	let enum m = LitlEnum.from_binary_tree_map m
 
 	(* val keys : 'a t -> index enum *)
-	let keys t = LitlEnumerator.from_binary_tree_map_keys t
+	let keys t = LitlEnum.from_binary_tree_map_keys t
 	
 	(* val values : 'a t -> 'a enum *)
-	let values t = LitlEnumerator.from_binary_tree_map_values t
+	let values t = LitlEnum.from_binary_tree_map_values t
 
   let rec for_all p t = begin 
 		match t with
@@ -279,7 +279,7 @@ module Make (I : OrderedType) : Map with
 	let compare comp s1 s2 = begin 
 		try
 			let e2 = fold (fun k1 v1 e2 -> begin 
-				match LitlEnumerator.next e2 with
+				match LitlEnum.next e2 with
 					None -> raise (Diff 1)
 				| Some ((k2, v2), e2') -> begin 
 						let c = I.compare k1 k2 in
@@ -294,7 +294,7 @@ module Make (I : OrderedType) : Map with
 				end
 			end
 			) s1 (enum s2) in
-			match LitlEnumerator.next e2 with
+			match LitlEnum.next e2 with
 				None -> 0
 			| _ -> -1
 		with Diff r -> r
@@ -304,7 +304,7 @@ module Make (I : OrderedType) : Map with
 	let equal comp s1 s2 = begin 
 		try
 			let e2 = fold (fun k1 v1 e2 -> begin 
-				match LitlEnumerator.next e2 with
+				match LitlEnum.next e2 with
 					None -> raise (Diff 1)
 				| Some ((k2, v2), e2') -> begin 
 						if (I.equal k1 k2) && (comp v1 v2)
@@ -313,7 +313,7 @@ module Make (I : OrderedType) : Map with
 				end
 			end
 			) s1 (enum s2) in
-			match LitlEnumerator.next e2 with
+			match LitlEnum.next e2 with
 				None -> true
 			| _ -> false
 		with Eject -> false

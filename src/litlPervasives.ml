@@ -10,7 +10,7 @@
 
 type 'a zoom = 'a LitlZoom.t
 
-type 'a enum = 'a LitlEnumerator.enum
+type 'a enum = 'a LitlEnum.enum
 
 module type ORDERED_TYPE = sig 
 	type t

@@ -6,7 +6,7 @@
 *  Copyright (c) 2010 B.W.C. Computing. All rights reserved.
 ************************************************************************)
 
-type 'a enum = 'a LitlEnumerator.enum
+type 'a enum = 'a LitlEnum.enum
 
 module type OrderedType = LitlPervasives.ORDERED_TYPE
 

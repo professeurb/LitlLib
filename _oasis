@@ -5,9 +5,10 @@ Synopsis:    Efficient enumerators and containers
 Authors:     Olivier Brunet
 License:     LGPL
 Plugins:     META (0.2)
+BuildDepends:	litlCore
 
 Library litlLib
   Path:       src
   BuildTools: ocamlbuild
   Modules:    Litl
-  InternalModules: LitlZoom, LitlPervasives, LitlBinaryTree, LitlBinaryTreeMap, LitlEnumerator, LitlMultiMap, LitlTrie, LitlTrieMap, LitlAVLMap, LitlAVLSet
+  InternalModules: LitlZoom, LitlPervasives, LitlMultiMap, LitlTrie, LitlTrieMap, LitlAVLMap, LitlAVLSet

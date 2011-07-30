@@ -9,7 +9,7 @@
 *
 ************************************************************************)
 
-type 'a enum = 'a LitlEnumerator.enum
+type 'a enum = 'a LitlEnum.enum
 
 module type SET = LitlPervasives.SET
 
@@ -17,7 +17,7 @@ module type MAP = LitlPervasives.MAP
 
 module type TRIE = sig 
 
-  type pre_elt
+  type atom
 
   type 'a map
 
@@ -28,13 +28,13 @@ module type TRIE = sig
   
   include SET with type t := t
   
-  val mem_enum : pre_elt enum -> t -> bool
-	val add_enum : pre_elt enum -> t -> t
-  val remove_enum : pre_elt enum -> t -> t
+	val mem_next : ('a -> (atom * 'a) option) -> 'a -> t -> bool
+	val add_next : ('a -> (atom * 'a) option) -> 'a -> t -> t
+  val remove_next : ('a -> (atom * 'a) option) -> 'a -> t -> t
 end
 
 module Make (M : MAP) = struct 
-  type pre_elt = M.index
+  type atom = M.index
 	type elt = M.index list
 	type 'a map = 'a M.t
 	type t = { 
@@ -95,13 +95,13 @@ module Make (M : MAP) = struct
 				| Some t' -> mem elt' t'
 	end
 
-	let rec mem_enum elt t = begin 
-		match Enum.next elt with
+	let rec mem_next nexter elt t = begin 
+		match nexter elt with
 			None -> t.present
 		| Some(index, elt') ->
 				match M.find_opt index t.next with
 					None -> false
-				| Some t' -> mem_enum elt' t'
+				| Some t' -> mem_next nexter elt' t'
 	end
 
 	let rec add elt t = begin 
@@ -122,13 +122,13 @@ module Make (M : MAP) = struct
 		}
 	end
 
-	let rec add_enum elt t = begin 
-		match LitlEnumerator.next elt with
+	let rec add_next nexter elt t = begin 
+		match nexter elt with
 			None -> { present = true ; next = t.next }
 		| Some (index, elt') ->
 			let next' = M.change (
 			fun t_opt -> Some (
-				add_enum elt' (
+				add_next nexter elt' (
 					match t_opt with
 						None -> empty
 					| Some t -> t
@@ -154,15 +154,15 @@ module Make (M : MAP) = struct
 			}
 	end
 
-	let rec remove_enum keys t = begin 
-		match LitlEnumerator.next keys with
+	let rec remove_next nexter keys t = begin 
+		match nexter keys with
 			None -> { present = false ; next = t.next }
 		| Some (key, keys') -> {
 				present = t.present ;
 				next = M.change (function
 					None -> None
 				| Some t' -> 
-						let t'' = remove_enum keys' t' in
+						let t'' = remove_next nexter keys' t' in
 						if is_empty t'' then None else Some t''
 				) key t.next
 			}
@@ -223,7 +223,7 @@ module Make (M : MAP) = struct
 
 	let rec inter t1 t2 = {
 		present = t1.present && t2.present ;
-		next = LitlEnumerator.fold (
+		next = LitlEnum.fold (
 			fun key next -> 
 				match M.find_opt key t2.next with 
 					None -> M.remove key next
@@ -238,7 +238,7 @@ module Make (M : MAP) = struct
 
 	let rec diff t1 t2 = {
 		present = t1.present && not t2.present ;
-		next = LitlEnumerator.fold (
+		next = LitlEnum.fold (
 			fun key next -> 
 				match M.find_opt key t2.next with 
 					None -> next
@@ -259,15 +259,15 @@ module Make (M : MAP) = struct
 		let rec aux accu t = begin 
 			match t.present with
 				false -> begin 
-					LitlEnumerator.expand (
+					LitlEnum.expand (
 						fun (key, t') -> aux (key :: accu) t'
 					) (M.enum t.next)
 				end
 			| true -> begin 
-						LitlEnumerator.from_once (
+						LitlEnum.from_once (
 							fun () -> Some (
 								List.rev accu,
-								LitlEnumerator.expand (
+								LitlEnum.expand (
 									fun (key, t') -> aux (key :: accu) t'
 								) (M.enum t.next)
 							)
@@ -464,12 +464,12 @@ let t2 = add [1;2;4] t2 ;;
 let t2 = add [1;3;4] t2 ;;
 let t2 = add [2;3;4] t2 ;;
 
-LitlEnumerator.to_list (enum t1) ;;
-LitlEnumerator.to_list (enum t2) ;;
-LitlEnumerator.to_list (enum (inter t1 t2)) ;;
-LitlEnumerator.to_list (enum (union t1 t2)) ;;
+LitlEnum.to_list (enum t1) ;;
+LitlEnum.to_list (enum t2) ;;
+LitlEnum.to_list (enum (inter t1 t2)) ;;
+LitlEnum.to_list (enum (union t1 t2)) ;;
 
-LitlEnumerator.to_list (enum (diff t1 t2)) ;;
-LitlEnumerator.to_list (enum (diff t2 t1)) ;;
+LitlEnum.to_list (enum (diff t1 t2)) ;;
+LitlEnum.to_list (enum (diff t2 t1)) ;;
 
 *)

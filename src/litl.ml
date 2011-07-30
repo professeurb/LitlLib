@@ -8,7 +8,7 @@
 *
 ************************************************************************)
 
-type 'a enum = 'a LitlEnumerator.enum
+type 'a enum = 'a LitlEnum.enum
 type 'a zoom = 'a LitlZoom.t
 
 module Zoom = LitlZoom
@@ -20,7 +20,7 @@ module type MAP = LitlPervasives.MAP
 module Core = struct 
   module BinaryTree = LitlBinaryTree
 	module BinaryTreeMap = LitlBinaryTreeMap
-	module Enumerator = LitlEnumerator
+	module Enumerator = LitlEnum
 end
 
 module Set (Ord : ORDERED_TYPE) : SET
@@ -53,7 +53,7 @@ with
 = LitlMultiMap.Make (M) (S)
 
 module type TRIE = sig 
-  type pre_elt
+  type atom
   type 'a map
 
 	type t = { 
@@ -63,13 +63,13 @@ module type TRIE = sig
 
 	include SET with type t := t
 	
-	val mem_enum : pre_elt enum -> t -> bool
-	val add_enum : pre_elt enum -> t -> t
-  val remove_enum : pre_elt enum -> t -> t
+	val mem_next : ('a -> (atom * 'a) option) -> 'a -> t -> bool
+	val add_next : ('a -> (atom * 'a) option) -> 'a -> t -> t
+  val remove_next : ('a -> (atom * 'a) option) -> 'a -> t -> t
 end
 
 module Trie (M : MAP) : TRIE with
-  type pre_elt = M.index and
+  type atom = M.index and
   type elt = M.index list and
   type 'a map = 'a M.t
 = LitlTrie.Make (M)

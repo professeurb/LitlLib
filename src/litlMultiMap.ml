@@ -8,7 +8,7 @@
 *
 ************************************************************************)
 
-type 'a enum = 'a LitlEnumerator.enum
+type 'a enum = 'a LitlEnum.enum
 
 module type SET = LitlPervasives.SET
 
@@ -165,8 +165,8 @@ module Make (M : MAP) (S : SET) : MULTI_MAP with
 	
 	(* val enum : t -> elt enum *)
 	let enum t = begin 
-		LitlEnumerator.expand (
-		  fun (key, c) -> LitlEnumerator.map (
+		LitlEnum.expand (
+		  fun (key, c) -> LitlEnum.map (
 			  fun value -> (key, value)) (S.enum c)
 		) (M.enum t)
 	end

@@ -6,14 +6,14 @@
 *  Copyright (c) 2010 B.W.C. Computing. All rights reserved.
 ************************************************************************)
 
-type 'a enum = 'a LitlEnumerator.enum
+type 'a enum = 'a LitlEnum.enum
 
 module type SET = LitlPervasives.SET
 
 module type MAP = LitlPervasives.MAP
 
 module type TRIE = sig 
-  type pre_elt
+  type atom
 
   type 'a map
 
@@ -24,12 +24,12 @@ module type TRIE = sig
 
 	include SET with type t := t
 	
-	val mem_enum : pre_elt enum -> t -> bool
-	val add_enum : pre_elt enum -> t -> t
-  val remove_enum : pre_elt enum -> t -> t
+	val mem_next : ('a -> (atom * 'a) option) -> 'a -> t -> bool
+	val add_next : ('a -> (atom * 'a) option) -> 'a -> t -> t
+  val remove_next : ('a -> (atom * 'a) option) -> 'a -> t -> t
 end
 
 module Make (M : MAP) : TRIE with
-  type pre_elt = M.index and
+  type atom = M.index and
 	type elt = M.index list and
 	type 'a map = 'a M.t

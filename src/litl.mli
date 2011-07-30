@@ -14,7 +14,7 @@ module Zoom : sig
   val bind : ('a -> 'b) -> 'a t -> 'b t
 end
 
-type 'a enum
+type 'a enum = 'a LitlEnum.enum
 type 'a zoom = 'a Zoom.t
 
 module type ORDERED_TYPE = sig 
@@ -120,84 +120,88 @@ end
 
 module Core : sig 
   module BinaryTree : sig 
-    type 'a t =
-		    Empty
-		  | Node of 'a t * 'a * 'a t * int
-
-		val fold : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
-		val iter : ('a -> unit) -> 'a t -> unit
-
-		val choose : 'a t -> 'a
-		val min : 'a t -> 'a
-		val max : 'a t -> 'a
+  	type 'a t = Empty | Node of 'a t * 'a * 'a t * int
+  
+  	val fold : ('a -> 'b -> 'b) -> 'a t -> 'b -> 'b
+  	val iter : ('a -> unit) -> 'a t -> unit
+  
+  	val choose : 'a t -> 'a
+  	val leftmost : 'a t -> 'a
+  	val rightmost : 'a t -> 'a
   end
   
   module BinaryTreeMap : sig 
-		type ('a, 'b) t =
-			Empty
-		| Node of ('a, 'b) t * 'a * 'b * ('a, 'b) t * int
-	
-		val fold : ('a -> 'b -> 'c -> 'c) -> ('a, 'b) t -> 'c -> 'c
-		val fold_keys : ('a -> 'b -> 'b) -> ('a, 'c) t -> 'b -> 'b
-		val fold_values : ('a -> 'b -> 'b) -> ('c, 'a) t -> 'b -> 'b
-		val fold_elts : ('a * 'b -> 'c -> 'c) -> ('a, 'b) t -> 'c -> 'c
-	
-		val iter : ('a -> 'b -> unit) -> ('a, 'b) t -> unit
-		val iter_keys : ('a -> unit) -> ('a, 'b) t -> unit
-		val iter_values : ('a -> unit) -> ('b, 'a) t -> unit
-		val iter_elts : ('a * 'b -> unit) -> ('a, 'b) t -> unit
-	
-		val choose : ('a, 'b) t -> 'a * 'b
-		val choose_key : ('a, 'b) t -> 'a
-	
-		val min : ('a, 'b) t -> 'a * 'b
-		val max : ('a, 'b) t -> 'a * 'b
+  	type ('a, 'b) t =
+  		Empty
+  	| Node of ('a, 'b) t * 'a * 'b * ('a, 'b) t * int
+  
+  	val fold : ('a -> 'b -> 'c -> 'c) -> ('a, 'b) t -> 'c -> 'c
+  	val fold_keys : ('a -> 'b -> 'b) -> ('a, 'c) t -> 'b -> 'b
+  	val fold_values : ('a -> 'b -> 'b) -> ('c, 'a) t -> 'b -> 'b
+  	val fold_elts : ('a * 'b -> 'c -> 'c) -> ('a, 'b) t -> 'c -> 'c
+  
+  	val iter : ('a -> 'b -> unit) -> ('a, 'b) t -> unit
+  	val iter_keys : ('a -> unit) -> ('a, 'b) t -> unit
+  	val iter_values : ('a -> unit) -> ('b, 'a) t -> unit
+  	val iter_elts : ('a * 'b -> unit) -> ('a, 'b) t -> unit
+  
+  	val choose : ('a, 'b) t -> 'a * 'b
+  	val choose_key : ('a, 'b) t -> 'a
+  	val choose_value : ('a, 'b) t -> 'b
+  
+  	val leftmost : ('a, 'b) t -> 'a * 'b
+  	val leftmost_key : ('a, 'b) t -> 'a
+  	val leftmost_value : ('a, 'b) t -> 'b
+  
+  	val rightmost : ('a, 'b) t -> 'a * 'b
+  	val rightmost_key : ('a, 'b) t -> 'a
+  	val rightmost_value : ('a, 'b) t -> 'b
 	end
 
   module Enumerator : sig 
-		class type ['a] enumerator = object 
-			('enum)
-			method next : ('a * 'enum) option
-			method fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b
-			method iter : ('a -> unit) -> unit
-			method skip_until : ('a -> bool) -> ('a * 'enum) option
-			method memoized : bool
-		end
-	
-		val empty : 'a enum
-		val from_list : 'a list -> 'a enum
-		val from_generator : ('a -> ('a * 'b) option) -> 'a -> 'b enum
-		val from_unit_generator : (unit -> 'a option) -> 'a enum
-		val from_enumerator : 'a enumerator -> 'a enum
-		val from_binary_tree : 'a BinaryTree.t -> 'a enum
-		val from_binary_tree_map : ('a, 'b) BinaryTreeMap.t -> ('a * 'b) enum
-		val from_binary_tree_map_keys : ('a, 'b) BinaryTreeMap.t -> 'a enum
-		val from_binary_tree_map_values : ('a, 'b) BinaryTreeMap.t -> 'b enum
-		val from_stream : 'a Stream.t -> 'a enum
-		val from_once : (unit -> ('a * 'a enum) option) -> 'a enum
-		val cons : 'a -> 'a enum -> 'a enum
-	
-		val next : 'a enum -> ('a * 'a enum) option
-		val fold : ('a -> 'b -> 'b) -> 'a enum -> 'b -> 'b
-		val iter : ('a -> unit) -> 'a enum -> unit
-	
-		val map : ('a -> 'b) -> 'a enum -> 'b enum
-		val map_with_aux :
-			('a -> 'b -> ('c * 'b) option) -> 'a enum -> 'b -> 'c enum
-		val map_opt : ('a -> 'b option) -> 'a enum -> 'b enum
-		val map_opt_with_aux :
-			('a -> 'b -> ('c option * 'b) option) -> 'a enum -> 'b -> 'c enum
-		val filter : ('a -> bool) -> 'a enum -> 'a enum
-		val concat : 'a enum -> 'a enum -> 'a enum
-		val expand : ('a -> 'b enum) -> 'a enum -> 'b enum
-		val expand_with_aux :
-			('a -> 'c -> 'b enum * 'c) -> 'a enum -> 'c -> 'b enum
-		val memo : 'a enum -> 'a enum
-	
-		val range : int -> int -> int enum
-		val counter : int enum
-		val trim : int -> 'a enum -> 'a enum
-		val to_list : 'a enum -> 'a list	
+  	type 'a enum
+  
+  	class type ['a] enumerator = object ('enum)
+  		method next : ('a * 'enum) option
+  		method fold : 'b. ('a -> 'b -> 'b) -> 'b -> 'b
+  		method iter : ('a -> unit) -> unit
+  		method skip_until : ('a -> bool) -> ('a * 'enum) option
+  		method memoized : bool
+  	end
+  
+  	val empty : 'a enum
+  	val from_list : 'a list -> 'a enum
+  	val from_generator : ('a -> ('a * 'b) option) -> 'a -> 'b enum
+  	val from_unit_generator : (unit -> 'a option) -> 'a enum
+  	val from_object : 'a enumerator -> 'a enum
+  	val from_binary_tree : 'a LitlBinaryTree.t -> 'a enum
+  	val from_binary_tree_map : ('a, 'b) LitlBinaryTreeMap.t -> ('a * 'b) enum
+  	val from_binary_tree_map_keys : ('a, 'b) LitlBinaryTreeMap.t -> 'a enum
+  	val from_binary_tree_map_values : ('a, 'b) LitlBinaryTreeMap.t -> 'b enum
+  	val from_stream : 'a Stream.t -> 'a enum
+  	val from_once : (unit -> ('a * 'a enum) option) -> 'a enum
+  	val cons : 'a -> 'a enum -> 'a enum
+  
+  	val next : 'a enum -> ('a * 'a enum) option
+  	val fold : ('a -> 'b -> 'b) -> 'a enum -> 'b -> 'b
+  	val iter : ('a -> unit) -> 'a enum -> unit
+  	val skip_until : ('a -> bool) -> 'a enum -> ('a * 'a enum) option
+  
+  	val map : ('a -> 'b) -> 'a enum -> 'b enum
+  	val map_with_aux : ('a -> 'b -> ('c * 'b) option) -> 'a enum -> 'b -> 'c enum
+  	val map_opt : ('a -> 'b option) -> 'a enum -> 'b enum
+  	val map_opt_with_aux :
+  		('a -> 'b -> ('c option * 'b) option) -> 'a enum -> 'b -> 'c enum
+  	val filter : ('a -> bool) -> 'a enum -> 'a enum
+  	val concat : 'a enum -> 'a enum -> 'a enum
+  	val expand : ('a -> 'b enum) -> 'a enum -> 'b enum
+  	val expand_with_aux : ('a -> 'c -> 'b enum * 'c) -> 'a enum -> 'c -> 'b enum
+  	val memo : 'a enum -> 'a enum
+  
+  	val range : int -> int -> int enum
+  	val counter : int enum
+  	val trim : int -> 'a enum -> 'a enum
+  	val to_list : 'a enum -> 'a list
 	end
 end
 
@@ -228,7 +232,7 @@ with
   type t = S.t M.t
 
 module type TRIE = sig 
-  type pre_elt
+  type atom
   type 'a map
 
 	type t = { 
@@ -238,13 +242,13 @@ module type TRIE = sig
 
 	include SET with type t := t
 	
-	val mem_enum : pre_elt enum -> t -> bool
-	val add_enum : pre_elt enum -> t -> t
-  val remove_enum : pre_elt enum -> t -> t
+	val mem_next : ('a -> (atom * 'a) option) -> 'a -> t -> bool
+	val add_next : ('a -> (atom * 'a) option) -> 'a -> t -> t
+  val remove_next : ('a -> (atom * 'a) option) -> 'a -> t -> t
 end
 
 module Trie (M : MAP) : TRIE with
-  type pre_elt = M.index and
+  type atom = M.index and
   type elt = M.index list and
   type 'a map = 'a M.t
 
