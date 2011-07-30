@@ -350,16 +350,112 @@ module Make (M : MAP) = struct
    - on dépile.
  *)
 
+  (* val do_true_down :
+    Trie.t -> Trie.t list -> (M.index * Trie.t * Trie.t) list -> t *)
+  let rec do_true_down trie floors stack = begin 
+  	match stack with 
+      [] -> { trie = trie ; list = floors }
+    | (key, trie', _, floor) :: stack' -> begin 
+  	    let new_trie = { trie' with 
+  	      Trie.next = M.set key trie trie'.Trie.next
+  	    } in
+  	    do_true_down new_trie (floor :: floors) stack'
+    end
+  end
 
-    (* go_out_false means that at some point, we must
-       remove things from the trie *)
-    let rec go_out_false keys trie trie_list queue stack = begin 
+	(* val do_true_up :
+	  atom list -> atom deque -> trie list ->
+	   (atom * trie * atom deque * trie) list -> t *)
+  let rec do_true_up keys queue floors stack = begin 
+    match keys with 
+    | [] -> begin 
+      let new_trie = { Trie.present = true ; Trie.next = M.empty } 
+      in
+      do_true_down new_trie floors stack
+    end
+    | key :: keys' -> begin 
+      let queue' = LitlDeque.cons_right queue key in
+      match floors with
+      | [] -> begin 
+	      let floor' = 
+	        Trie.add_next LitlDeque.next (LitlDeque.cons key queue) Trie.empty
+	      in
+	      let stack' = (key, Trie.empty, LitlDeque.empty, floor') :: stack in
+        do_true_up keys' queue' [] stack'
+      end
+      | floor :: floors' -> begin 
+	      let floor' = 
+	        Trie.add_next LitlDeque.next (LitlDeque.cons key queue) floor
+	      in
+	      let stack' = (key, Trie.empty, LitlDeque.empty, floor') :: stack in
+        do_true_up keys' queue' floors' stack'
+      end
+    end
+  end
 
-    end in
-    (* go_out_true means that at some point, we must
-       add things to the trie *)
-    let rec go_out_true keys trie trie_list queue stack = begin 
-    end in
+  (* When false, we just need to go down. *)
+
+  (* val do_false :
+	  trie -> trie list ->
+	  (atom * trie * atom deque * trie) list -> t *)
+  let rec do_false trie floors stack = begin 
+    match stack with
+      [] -> { trie = trie ; list = floors }
+    | (key, trie', queue, floor) :: stack' -> begin 
+      if Trie.is_empty trie then begin 
+        let floor' = Trie.remove_next LitlDeque.next queue trie
+        and new_trie = { trie' with
+	        Trie.next = M.remove key trie'.Trie.next
+	      } in
+	      do_false new_trie (floor' :: floors) stack'
+      end
+      else begin 
+        let new_trie = { trie' with
+          Trie.next = M.set key trie trie'.Trie.next
+        } in
+        do_false new_trie (floor :: floors) stack'
+      end
+    end
+  end
+
+  let rec change_aux f keys trie queue floors stack = begin 
+    match keys with
+    | [] -> begin 
+      let when_true = f true in
+      if when_true = trie.Trie.present
+      then (* We want to add an element that's already there *)
+        raise Eject
+      else
+	      if when_true 
+        then (* when_true is true, so that we do add the element *)
+          do_true_down {trie with Trie.present = true} floors stack
+        else (* when_true is false, so that we remove the element *)
+          do_false {trie with Trie.present = false} floors stack
+    end
+    | key :: keys' -> begin 
+      match M.find_opt key trie.Trie.next with
+      | None -> begin 
+        if f false
+        then 
+          do_true_up keys queue floors stack
+	      else (* we remove an element that's not present *)
+		      raise Eject
+		  end
+		  | Some trie' -> begin 
+        match floors with 
+          [] -> assert false
+        | floor :: floors' -> 
+	        let queue' = LitlDeque.cons_right queue key in 
+	        let stack' = (key, trie, queue', floor) :: stack in
+	        change_aux f keys' trie' queue' floors' stack'
+	    end
+    end
+  end
+
+  let change f keys t = begin 
+    change_aux f keys t.trie LitlDeque.empty t.list []
+  end
+
     let rec go_in f keys trie trie_list queue stack = begin 
       match keys with
       | [] -> begin 
