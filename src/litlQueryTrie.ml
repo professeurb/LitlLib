@@ -406,7 +406,7 @@ module Make (M : MAP) = struct
     | (key, trie', queue, floor) :: stack' -> begin 
       if Trie.is_empty trie then begin 
         let floor' =
-          Trie.remove_next LitlDeque.next (LitlDeque.cons key queue) trie
+          Trie.remove_next LitlDeque.next (LitlDeque.cons key queue) floor
         and new_trie = { trie' with
 	        Trie.next = M.remove key trie'.Trie.next
 	      } in
