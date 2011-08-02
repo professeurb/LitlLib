@@ -15,26 +15,6 @@
 
 *)
 
-(* module Enum = LitlEnum *)
-
-module MutableList = struct 
-  type 'a elt = Nil | Cons of 'a * 'a t
-  and 'a t = 'a elt ref
-
-  let cons elt (t : 'a t) = begin 
-    (ref (Cons (elt, t)) : 'a t)
-  end
-
-  let enum t = begin 
-    let aux t = begin 
-      match !t with
-        Nil -> None
-      | Cons (a, b) -> Some (b, a)
-    end in
-    LitlEnum.from_generator aux t
-  end
-end
-
 (*
 
 module I = struct type t = int let compare = compare let equal = (=) end
@@ -45,6 +25,7 @@ module M = Litl.Map (I) ;;
 module Make (M : MAP) = struct
   module Trie = Litl.Trie (M)
 
+  type elt = Trie.elt
   type t = {
     trie : Trie.t ;
     list : Trie.t list
@@ -62,294 +43,6 @@ module Make (M : MAP) = struct
 
   let mem elt t = Trie.mem elt t.trie
 
-  (* val add_aux :
-    Trie.atom MutableList.t ->
-    Trie.atom MutableList.elt ref ->
-    Trie.atom list -> Trie.t list -> Trie.t list -> Trie.t list *)
-  (* let rec add_aux head tail elt do_ne to_do = begin 
-    match elt with
-      pre :: elt' -> begin 
-        let (trie, to_do') = match to_do with
-          [] -> (Trie.empty, [])
-        | trie :: to_do' -> (trie, to_do') in 
-        let trie' = begin 
-          Trie.add_enum (MutableList.enum (MutableList.cons pre head)) trie
-        end in
-        let new_tail = ref MutableList.Nil in
-        tail := MutableList.Cons (pre, new_tail) ;
-        add_aux head new_tail elt' (trie' :: do_ne) to_do'
-      end
-    | _ -> List.rev_append do_ne to_do
-  end *)
-
-  (* val add_aux :
-    M.index LitlDeque.t ->
-        M.index list -> Trie.t list -> Trie.t list -> Trie.t list *)
-  let rec add_aux queue elt do_ne to_do = begin 
-    match elt with
-      pre :: elt' -> begin 
-        let (trie, to_do') = begin 
-          match to_do with
-            [] -> (Trie.empty, [])
-          | trie :: to_do' -> (trie, to_do')
-        end in
-        let trie' = begin 
-          Trie.add_next LitlDeque.next (LitlDeque.cons pre queue) trie
-        end in
-        add_aux (LitlDeque.cons_right queue pre) elt' (trie' :: do_ne) to_do'
-      end
-    | [] -> List.rev_append do_ne to_do
-  end
-
-  let add elt t = begin 
-    let new_trie = Trie.add elt t.trie in
-    let new_list = begin 
-      match elt with
-        [] -> t.list
-      | pre :: elt' -> add_aux LitlDeque.empty elt' [] t.list
-    end
-    in {
-      trie = new_trie ;
-      list = new_list
-    }
-  end
-
-  let rec add_next_aux nexter queue elt do_ne to_do = begin 
-    match nexter elt with
-      Some (pre, elt') -> begin 
-        let (trie, to_do') = match to_do with
-          [] -> (Trie.empty, [])
-        | trie :: to_do' -> (trie, to_do') in 
-        let trie' = begin 
-          Trie.add_next LitlDeque.next (LitlDeque.cons pre queue) trie
-        end in
-        add_next_aux nexter (
-          LitlDeque.cons_right queue pre
-        ) elt' (trie' :: do_ne) to_do'
-      end
-    | _ -> List.rev_append do_ne to_do
-  end
-
-  (* val add_next : ('a -> (atom * 'a) option) -> 'a -> t -> t *)
-  let add_next nexter elt t = begin 
-    let new_trie = Trie.add_next nexter elt t.trie in
-    let new_list = begin 
-      match nexter elt with
-        None -> t.list
-      | Some (pre, elt') ->
-          add_next_aux nexter (
-            LitlDeque.cons pre LitlDeque.empty
-          ) elt' [] t.list
-    end
-    in {
-      trie = new_trie ;
-      list = new_list
-    }
-  end
-  
-  (* type 'a elt = Nil | Cons of 'a * 'a t
-  and 'a t = 'a elt ref *)
-
-  let remove keys t = begin 
-
-    let rec aux keys trie tlist mlist = begin 
-      match keys with
-        [] -> begin 
-          if trie.Trie.present then begin 
-            let trie' = { trie with Trie.present = false } in
-            (trie', tlist)
-          end
-          else raise Eject (* nothing to do *)
-        end
-      | key :: keys' -> begin 
-          match M.find_opt key trie.Trie.next with
-            Some subtrie -> begin 
-              match tlist with
-                [] -> assert false
-              | tt :: tlist' -> begin 
-
-                (* We update our mutable list *)
-                let mnext = ref MutableList.Nil in
-                mlist := MutableList.Cons (key, mnext) ;
-
-                (* We call aux on the next level *)
-                let (subtrie', tlist'') = aux keys' subtrie tlist' mnext in
-
-                (* We update our current trie *)
-                let trie' = {
-                  trie with Trie.next = begin 
-                    if Trie.is_empty subtrie'
-                    then (* begin Format.printf "..a\n" ; *) 
-                      M.remove key trie.Trie.next (* end *)
-                    else M.set key subtrie' trie.Trie.next
-                  end } in
-    
-                (* We un-update (downdate?) our mutable list *)
-                mlist := MutableList.Nil ;
-
-                (* We now modify our trielist accordingly *)
-                let tlist3 = begin 
-                  if Trie.is_empty subtrie'
-                  then begin 
-                    let mlist = MutableList.cons key root in
-                    let tt' =
-                      Trie.remove_enum (MutableList.enum mlist) tt in
-                    if Trie.is_empty tt' && tlist'' = []
-                    then [] else tt' :: tlist''
-                  end
-                  else tt :: tlist''
-                end
-    
-                (* We are done, now *)
-                in (
-                  trie',
-                  tlist3
-                )
-              end
-            end
-          | None -> raise Eject (* nothing to do *)
-      end
-    end in
-    let aux_first keys trie tlist mlist = begin 
-      match keys with
-        [] -> begin 
-          if trie.Trie.present then begin 
-            let trie' = { trie with Trie.present = false } in
-            (trie', tlist)
-          end
-          else raise Eject (* nothing to do *)
-        end
-      | key :: keys' -> begin 
-        match M.find_opt key trie.Trie.next with
-          Some trie' -> begin 
-            let mnext = ref MutableList.Nil in
-            mlist := MutableList.Cons(key, mnext) ;
-            let (trie'', tlist') = aux keys' trie' tlist mnext in (
-              { trie with Trie.next = M.set key trie'' trie.Trie.next },
-              tlist'
-            )
-          end
-        | None -> raise Eject (* nothing to do *)
-      end
-    end in
-    try
-      let (trie, tlist) = aux_first keys t.trie t.list root in
-      { trie = trie ; list = tlist }
-    with Eject -> t
-  end
-
-  let remove_enum keys t = begin 
-
-    let root = ref MutableList.Nil in
-
-    let rec aux keys trie tlist mlist = begin 
-      match Enum.next keys with
-        None -> begin 
-          if trie.Trie.present then begin 
-            let trie' = { trie with Trie.present = false } in
-            (trie', tlist)
-          end
-          else raise Eject (* nothing to do *)
-        end
-      | Some (key, keys') -> begin 
-          match M.find_opt key trie.Trie.next with
-            Some subtrie -> begin 
-              match tlist with
-                [] -> assert false
-              | tt :: tlist' -> begin 
-
-                (* We update our mutable list *)
-                let mnext = ref MutableList.Nil in
-                mlist := MutableList.Cons (key, mnext) ;
-
-                (* We call aux on the next level *)
-                let (subtrie', tlist'') = aux keys' subtrie tlist' mnext in
-
-                (* We update our current trie *)
-                let trie' = {
-                  trie with Trie.next = begin 
-                    if Trie.is_empty subtrie'
-                    then
-                      M.remove key trie.Trie.next
-                    else M.set key subtrie' trie.Trie.next
-                  end
-               } in
-    
-                (* We un-update (downdate?) our mutable list *)
-                mlist := MutableList.Nil ;
-
-                (* We now modify our trielist accordingly *)
-                let tlist3 = begin 
-                  if Trie.is_empty subtrie'
-                  then begin 
-                    let mlist = MutableList.cons key root in
-                    let tt' = Trie.remove_enum (MutableList.enum mlist) tt in
-                    if Trie.is_empty tt' && tlist'' = []
-                    then [] else tt' :: tlist''
-                  end
-                  else tt :: tlist''
-                end
-    
-                (* We are done, now *)
-                in (
-                  trie',
-                  tlist3
-                )
-              end
-            end
-          | None -> raise Eject (* nothing to do *)
-      end
-    end in
-    let aux_first keys trie tlist mlist = begin 
-      match Enum.next keys with
-        None -> begin 
-          if trie.Trie.present then begin 
-            let trie' = { trie with Trie.present = false } in
-            (trie', tlist)
-          end
-          else raise Eject (* nothing to do *)
-        end
-      | Some (key, keys') -> begin 
-        match M.find_opt key trie.Trie.next with
-          Some trie' -> begin 
-            let mnext = ref MutableList.Nil in
-            mlist := MutableList.Cons(key, mnext) ;
-            let (trie'', tlist') = aux keys' trie' tlist mnext in (
-              { trie with Trie.next = M.set key trie'' trie.Trie.next },
-              tlist'
-            )
-          end
-        | None -> raise Eject (* nothing to do *)
-      end
-    end in
-    try
-      let (trie, tlist) = aux_first keys t.trie t.list root in
-      { trie = trie ; list = tlist }
-    with Eject -> t
-  end
-  
-  let change f keys t = begin 
-    match f (Trie.mem keys t.trie) with
-      false -> remove keys t
-    | true -> add keys t
-  end
-
-  let change_enum f keys t = begin 
-    let keys' = Enum.memo keys in
-    match f (Trie.mem_enum keys' t.trie) with
-      false -> remove_enum keys' t
-    | true -> add_enum keys' t
-  end
-
-  let change f keys t = begin 
-
-(* Dans le cas true, deux cas : on est au bout de keys, et il ne faut que
-   revenir, ou bien d'une part il faut venir les keys puis revenir.
-   Il faut donc avoir deux fonctions "positives" :
-   - on continue (éventuellement) de parcourir les clés, puis...
-   - on dépile.
- *)
-
   (* val do_true_down :
     trie -> trie list -> (atom * trie * atom queue * trie) list -> t *)
   let rec do_true_down trie floors stack = begin 
@@ -364,7 +57,7 @@ module Make (M : MAP) = struct
   end
 
 	(* val do_true_up :
-	  atom list -> atom deque -> trie list ->
+	  elt -> atom deque -> trie list ->
 	   (atom * trie * atom deque * trie) list -> t *)
   let rec do_true_up keys trie queue floors stack = begin 
     match keys with 
@@ -421,6 +114,10 @@ module Make (M : MAP) = struct
     end
   end
 
+  (* val change_aux :
+    (bool -> bool) -> elt -> trie ->
+    atom queue -> trie list ->
+    (atom * trie * atom queue * trie) list -> t *)
   let rec change_aux f keys trie queue floors stack = begin 
     match keys with
     | [] -> begin 
@@ -455,39 +152,171 @@ module Make (M : MAP) = struct
     end
   end
 
-  let change f keys t = begin 
+  (* let change f keys t = begin 
     change_aux f keys t.trie LitlDeque.empty t.list []
+  end *)
+
+  (* val change : (bool -> bool) -> elt -> t -> t *)
+  let change f keys t = begin 
+    try
+      change_aux f keys t.trie LitlDeque.empty t.list []
+    with Eject -> t
   end
 
-
+  (* val change_return : (bool -> bool * 'a) -> elt -> t -> t * 'a *)
   let change_return f keys t = begin 
-    let (flag, result) = f (Trie.mem keys t.trie) in
-    match flag with
-      false -> (remove keys t, result)
-    | true -> (add keys t, result)
+    let result = ref None in
+    let f' b = begin 
+      let (b', res) = f b in
+      result := Some res ; b'
+    end in
+    let t' = change f' keys t in
+    match !result with
+      None -> assert false
+    | Some res -> (t', res)
   end
 
-  let change_return_enum f keys t = begin 
-    let (flag, result) = f (Trie.mem_enum keys t.trie) in
-    match flag with
-      false -> (remove_enum keys t, result)
-    | true -> (add_enum keys t, result)
+  (* val add : elt -> t -> t *)
+	let add keys t = begin 
+	  change (fun _ -> true) keys t
+	end
+
+  (* val remove : elt -> t -> t *)
+	let remove keys t = begin 
+	  change (fun _ -> false) keys t
+	end
+
+  (* val singleton : elt -> t *)
+  let singleton keys = begin 
+    change (fun _ -> true) keys empty
   end
 
-  let singleton elt = begin 
-    add elt empty
+  (* val do_true_up_next :
+	  ('a -> (atom * 'a) option) -> 'a ->
+	  trie -> atom queue -> trie list ->
+    (atom * trie * atom queue * trie) list -> t *)
+  let rec do_true_up_next nexter keys trie queue floors stack = begin 
+    match nexter keys with 
+    | None -> begin 
+      let new_trie = { Trie.present = true ; Trie.next = M.empty } 
+      in
+      do_true_down new_trie floors stack
+    end
+    | Some (key, keys') -> begin 
+      let queue' = LitlDeque.cons_right queue key in
+      match floors with
+      | [] -> begin 
+	      let floor = 
+	        Trie.add_next LitlDeque.next (LitlDeque.cons key queue) Trie.empty
+	      in
+	      (* The queue in the stack will not be used. *)
+	      let stack' = (key, trie, LitlDeque.empty, floor) :: stack in
+        do_true_up_next nexter keys' Trie.empty queue' [] stack'
+      end
+      | floor :: floors' -> begin 
+	      let floor' = 
+	        Trie.add_next LitlDeque.next (LitlDeque.cons key queue) floor
+	      in
+	      (* The queue in the stack will not be used. *)
+	      let stack' = (key, trie, LitlDeque.empty, floor') :: stack in
+        do_true_up_next nexter keys' Trie.empty queue' floors' stack'
+      end
+    end
+  end
+
+	(* val change_aux_next :
+	  (bool -> bool) ->
+	  ('a -> (atom * 'a) option) -> 'a ->
+	  trie -> atom queue -> trie list ->
+	  (atom * trie * atom queue * trie) list -> t *)
+  let rec change_aux_next f nexter keys trie queue floors stack = begin 
+    match nexter keys with
+    | None -> begin 
+      let when_true = f true in
+      if when_true = trie.Trie.present
+      then (* There is nothing to do *)
+        raise Eject
+      else
+	      if when_true 
+        then (* when_true is true, so that we do add the element *)
+          do_true_down {trie with Trie.present = true} floors stack
+        else (* when_true is false, so that we remove the element *)
+          do_false {trie with Trie.present = false} floors stack
+    end
+    | Some (key, keys') -> begin 
+      match M.find_opt key trie.Trie.next with
+      | None -> begin 
+        if f false
+        then (* We must add this element, since it's not present *)
+          do_true_up_next nexter keys trie queue floors stack
+	      else (* we want to remove an element that's not present *)
+		      raise Eject
+		  end
+		  | Some trie' -> begin 
+        match floors with 
+          [] -> assert false
+        | floor :: floors' -> 
+	        let queue' = LitlDeque.cons_right queue key
+	        and stack' = (key, trie, queue, floor) :: stack in
+	        change_aux_next f nexter keys' trie' queue' floors' stack'
+	    end
+    end
+  end
+
+  (* val change_next :
+	  (bool -> bool) -> ('a -> (atom * 'a) option) -> 'a -> t -> t *)
+  let change_next f nexter keys t = begin 
+    try
+      change_aux_next f nexter keys t.trie LitlDeque.empty t.list []
+    with Eject -> t
+  end
+
+  (* val change_return_next :
+	  (bool -> bool * 'a) ->
+	  ('b -> (atom * 'b) option) -> 'b -> t -> t * 'a *)
+  let change_return_next f nexter keys t = begin 
+    let result = ref None in
+    let f' b = begin 
+      let (b', res) = f b in
+      result := Some res ; b'
+    end in
+    let t' = change_next f' nexter keys t in
+    match !result with
+      None -> assert false
+    | Some res -> (t', res)
   end
   
-  (* let rec union t1 t2 = {
-    present = t1.present || t2.present ;
-    next = M.fold (
-      fun index t next -> M.change (
-        fun t_opt -> match t_opt with
-          None -> Some t
-        | Some t' -> Some (union t t')
-        ) index next
-      ) t1.next t2.next
-  } *)
+  (* val add_next : ('a -> (atom * 'a) option) -> 'a -> t -> t *)
+	let add_next nexter keys t = begin 
+	  change_next (fun _ -> true) nexter keys t
+	end
+
+  (* val remove_next : ('a -> (atom * 'a) option) -> 'a -> t -> t *)	
+	let remove_next nexter keys t = begin 
+	  change_next (fun _ -> false) nexter keys t
+	end
+
+  (* val singleton_next : ('a -> (atom * 'a) option) -> 'a -> t *)
+  let singleton_next nexter keys = begin 
+    change_next (fun _ -> true) nexter keys empty
+  end
+  
+  (* val union : t -> t -> t *)
+  let union t1 t2 = begin 
+    let rec aux l1 l2 lres = begin 
+      match l1 with
+        [] -> List.rev_append lres l2
+      | tl1 :: l1' -> begin 
+        match l2 with
+          [] -> List.rev_append lres l1
+        | tl2 :: l2' -> aux l1' l2' ((Trie.union tl1 tl2) :: lres)
+	    end
+	  end in
+    let new_trie = Trie.union t1.trie t2.trie in
+    { trie = new_trie ;
+      list = aux t1.list t2.list []
+    }
+  end
 
   (* let rec inter t1 t2 = {
     present = t1.present && t2.present ;
