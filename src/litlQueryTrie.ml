@@ -33,15 +33,47 @@ module Make (M : MAP) = struct
 
   exception Eject
 
+  (* val empty : t *)
   let empty = { trie = Trie.empty ; list = [] }
 
+  (* val is_empty : t -> bool *)
   let is_empty t = Trie.is_empty t.trie
 
+  (* val height : t -> int *)
   let height t = Trie.height t.trie
 
+  (* val zoom : t -> elt zoom *)
   let zoom t = Trie.zoom t.trie
 
+  (* val mem : elt -> t -> bool *)
   let mem elt t = Trie.mem elt t.trie
+
+  (* val to_trie : t -> trie *)
+  let to_trie t = t.trie
+
+  (* val from_trie : trie -> t *)
+  let from_trie trie = begin 
+    let rec aux key trie queue list = begin 
+      let (current, list') = begin 
+        match list with
+          current :: list' -> (current, list')
+        | [] -> (Trie.empty, [])
+      end in
+      let current' = begin 
+        Trie.add_next LitlDeque.next (LitlDeque.cons key queue) current
+	    end
+	    and queue' = LitlDeque.cons_right queue key in
+	    current' :: (
+		    M.fold (
+			    fun key' trie' list'' -> aux key' trie' queue' list''
+			  ) trie.Trie.next list'
+		  )
+    end in
+    let floors = M.fold (
+	    fun key trie list -> aux key trie LitlDeque.empty list
+	  ) trie.Trie.next [] in
+	  { trie = trie ; list = floors }
+  end
 
   (* val do_true_down :
     trie -> trie list -> (atom * trie * atom queue * trie) list -> t *)
@@ -87,8 +119,6 @@ module Make (M : MAP) = struct
       end
     end
   end
-
-  (* When false, we just need to go down. *)
 
   (* val do_false :
 	  trie -> trie list ->
@@ -318,161 +348,93 @@ module Make (M : MAP) = struct
     }
   end
 
-  (* let rec inter t1 t2 = {
-    present = t1.present && t2.present ;
-    next = Enum.fold (
-      fun key next -> 
-        match M.find_opt key t2.next with 
-          None -> M.remove key next
-        | Some t' -> M.change (
-            function
-              None -> None
-            | Some t -> let t'' = inter t t' in
-                if is_empty t'' then None else Some t''
-          ) key next
-    ) (M.keys t1.next) t1.next
-  } *)
+  (* val inter : t -> t -> t *)
+  let inter t1 t2 = begin 
+    from_trie (Trie.inter t1.trie t2.trie)
+  end
 
-  (* let rec diff t1 t2 = {
-    present = t1.present && not t2.present ;
-    next = Enum.fold (
-      fun key next -> 
-        match M.find_opt key t2.next with 
-          None -> next
-        | Some t' -> M.change (
-            function
-              None -> None
-            | Some t -> let t'' = diff t t' in
-                if is_empty t'' then None else Some t''
-          ) key next
-    ) (M.keys t1.next) t1.next
-  } *)
+  (* val diff : t -> t -> t *)
+  let diff t1 t2 = begin 
+    from_trie (Trie.diff t1.trie t2.trie)
+  end
 
+  (* val subset : t -> t -> bool *)
   let subset t1 t2 = begin 
     Trie.subset t1.trie t2.trie
   end
     
+  (* val enum : t -> elt enum *)
   let enum t = begin 
     Trie.enum t.trie
   end
 
+  (* val iter : (elt -> unit) -> t -> unit *)
   let iter f t = begin 
     Trie.iter f t.trie
   end
 
+  (* val fold : (elt -> 'a -> 'a) -> t -> 'a -> 'a *)
   let fold f t accu = begin 
     Trie.fold f t.trie accu
   end
 
+  (* val for_all : (elt -> bool) -> t -> bool *)
   let for_all f t = begin 
     Trie.for_all f t.trie
   end  
 
+  (* val exists : (elt -> bool) -> t -> bool *)
   let exists f t = begin 
     Trie.exists f t.trie
   end
 
+  (* val compare : t -> t -> int *)
   let compare t1 t2 = begin 
     Trie.compare t1.trie t2.trie
   end
 
+  (* val equal : t -> t -> bool *)
   let equal t1 t2 = begin 
     Trie.equal t1.trie t2.trie
   end
 
+  (* val choose : t -> elt *)
   let choose t = begin 
     Trie.choose t.trie
   end
 
+  (* val min : t -> elt *)
   let min t = begin 
     Trie.min t.trie
   end
 
+  (* val max : t -> Trie.elt *)
   let max t = begin 
     Trie.max t.trie
   end
-  
-  (* let rec split keys t = begin 
-    match keys with
-      [] -> (empty, t.present, {present = false ; next = t.next})
-    | key :: keys' -> begin 
-        let (m1, t_opt, m2) = M.split key t.next in
-          match t_opt with
-            None -> ({
-                present = t.present ;
-                next = m1
-              },
-              false, {
-                present = false ;
-                next = m2
-              }
-            )
-          | Some t' -> 
-            let (t1, pres, t2) = split keys' t' in
-            ({
-              present = t.present ;
-              next = if (is_empty t1) then m1 else M.set key t1 m1
-            },
-            pres, {
-              present = false ;
-              next = if (is_empty t2) then m2 else M.set key t2 m2
-            }
-          )
-    end
-  end *)
 
-  (* let rec split_left keys t = begin 
-    match keys with
-      [] -> (empty, t.present)
-    | key :: keys' -> begin 
-        let (m1, t_opt) = M.split_left key t.next in
-          match t_opt with
-            None ->
-              (
-                {
-                  present = t.present ;
-                  next = m1
-                },
-                false
-              )
-          | Some t' -> 
-            let (t1, pres) = split_left keys' t' in
-            (
-              {
-                present = t.present ;
-                next = if (is_empty t1) then m1 else M.set key t1 m1
-              },
-              pres
-            )
-    end
-  end *)
+  (* val split : elt -> t -> t * bool * t *)  
+  let split keys t = begin 
+    let (trie1, res, trie2) = Trie.split keys t.trie in
+    (from_trie trie1, res, from_trie trie2)
+  end
 
-  (* let rec split_right keys t = begin 
-    match keys with
-      [] -> (t.present, {present = false ; next = t.next})
-    | key :: keys' -> begin 
-        let (t_opt, m2) = M.split_right key t.next in
-          match t_opt with
-            None -> (
-              false, {
-                present = false ;
-                next = m2
-              }
-            )
-          | Some t' -> 
-            let (pres, t2) = split_right keys' t' in (
-              pres, {
-                present = false ;
-                next = if (is_empty t2) then m2 else M.set key t2 m2
-              }
-            )
-    end
-  end *)
+  (* val split_left : elt -> t -> t * bool *)
+  let split_left keys t = begin 
+    let (trie1, res) = Trie.split_left keys t.trie in
+    (from_trie trie1, res)
+  end
 
+  (* val split_right : elt -> t -> bool * t *)
+  let split_right keys t = begin 
+    let (res, trie2) = Trie.split_right keys t.trie in
+    (res, from_trie trie2)
+  end
+
+  (* val filter : (elt -> bool) -> t -> t *)
   let filter f t = begin 
     Trie.fold (fun elt t -> if f elt then add elt t else t) t.trie empty
   end
-
 end
 
 (*
@@ -487,6 +449,10 @@ let tt = add [1;2;3] tt ;;
 let tt = add [1;3;4] tt ;;
 let tt = add [1;3] tt ;;
 let tt = add [2;3] tt ;;
+
+let t = to_trie tt ;;
+let ttt = from_trie t ;;
+
 
 List.map f tt.list ;;
 
